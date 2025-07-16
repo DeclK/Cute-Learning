@@ -10,6 +10,53 @@
 #include <cute/tensor.hpp>
 #include <stdarg.h>
 
+void printf_fail(const char *fmt, ...) {
+  int red = 31;
+  int def = 39;
+
+  printf("\033[%dm", red);
+
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+
+  printf("\033[%dm", def);
+}
+
+void printf_ok(const char *fmt, ...) {
+  int red = 32;
+  int def = 39;
+
+  printf("\033[%dm", red);
+
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+
+  printf("\033[%dm", def);
+}
+
+// // Pythonic print function - prints a line and appends newline
+// inline void print(const char* str) {
+//     printf("%s\n", str);
+// }
+
+// // Pythonic print with printf-style formatting
+// inline void print(const char* fmt, ...) {
+//     va_list args;
+//     va_start(args, fmt);
+//     vprintf(fmt, args);
+//     va_end(args);
+//     printf("\n");
+// }
+
+// // Pythonic print for C++ strings
+// inline void print(const std::string& str) {
+//     printf("%s\n", str.c_str());
+// }
+
 template <typename T>
 void cpu_rand_data(T *c) {
   auto t = *c;
