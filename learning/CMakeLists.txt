@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 # Set include directories
 set(CUTLASS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../cutlass/include)
+set(CUTLASS_UTIL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../cutlass/tools/util/include)
 
 # Create executables
 add_executable(tensor_basics tensor_basics.cu)
@@ -19,7 +20,7 @@ add_executable(vector_add vector_add.cu)
 
 # Set include directories
 target_include_directories(tensor_basics PRIVATE ${CUTLASS_INCLUDE_DIR})
-target_include_directories(vector_add PRIVATE ${CUTLASS_INCLUDE_DIR})
+target_include_directories(vector_add PRIVATE ${CUTLASS_INCLUDE_DIR} ${CUTLASS_UTIL_DIR})
 
 # Set CUDA compilation flags
 target_compile_options(tensor_basics PRIVATE 
