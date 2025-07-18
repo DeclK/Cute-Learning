@@ -51,7 +51,7 @@ __global__ void vector_add(
   copy(tzRx, tzr);
 }
 
-// z = ax + by + c
+/* This does not use half2 acclerate */
 template <int kNumElemPerThread = 8>
 __global__ void vector_add_half(
     half *z, int num, const half *x, const half *y, const half a, const half b, const half c) {
@@ -87,6 +87,34 @@ __global__ void vector_add_half(
   // STG.128
   copy(tzR, tzr);
 }
+
+
+/* This directly use global memory, slow but runnable */
+template <int kNumElemPerThread = 8>
+__global__ void vector_add_global_mem(
+    half *z, int num, const half *x, const half *y, const half a, const half b, const half c) {
+  using namespace cute;
+
+  int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  if (idx >= num / kNumElemPerThread) { // 未处理非对齐问题
+    return;
+  }
+
+  Tensor tz = make_tensor(make_gmem_ptr(z), make_shape(num));
+  Tensor tx = make_tensor(make_gmem_ptr(x), make_shape(num));
+  Tensor ty = make_tensor(make_gmem_ptr(y), make_shape(num));
+
+  Tensor tzr = local_tile(tz, make_shape(Int<kNumElemPerThread>{}), make_coord(idx));
+  Tensor txr = local_tile(tx, make_shape(Int<kNumElemPerThread>{}), make_coord(idx));
+  Tensor tyr = local_tile(ty, make_shape(Int<kNumElemPerThread>{}), make_coord(idx));
+
+#pragma unroll
+  for (int i = 0; i < size(tzr); ++i) {
+    // two hfma2 instruction
+    tzr(i) = txr(i) * a + (tyr(i) * b + c);
+  }
+}
+
 
 void run_kernel(half *z, int num, const half *x, const half *y, const half a, const half b, const half c) {
   int block_size = 256;
