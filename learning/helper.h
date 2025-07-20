@@ -232,3 +232,24 @@ void print_tensor_values(const TensorType& tensor, const std::string& name, int 
     }
     std::cout << std::endl;
 }
+
+
+// use shape and seed to create random host data, return the pointer
+template <typename T>
+T* create_host_data(std::vector<int> shape, int seed = 0) {
+    int size = 1;
+    for (int dim : shape) {
+        size *= dim;
+    }
+    T* data = (T*)malloc(size * sizeof(T));
+    if (!data) {
+        fprintf(stderr, "Failed to allocate host memory\n");
+        exit(EXIT_FAILURE);
+    }
+
+    srand(seed);
+    for (int i = 0; i < size; ++i) {
+        data[i] = static_cast<T>((rand() % 200 - 100) * 0.01f); // Random values between -1.0 and 1.0
+    }
+    return data;
+}

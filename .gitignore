@@ -7,5 +7,6 @@
 *.log
 # **/gemm
 
-/build
+build
 /cutlass
+tempt**

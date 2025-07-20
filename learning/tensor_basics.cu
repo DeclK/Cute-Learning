@@ -17,7 +17,7 @@ int main() {
     auto tensor_float = make_tensor(float_data, make_shape(3, 4));
     auto tensor_float_1 = make_tensor(float_data, make_shape(3, 4));
     auto tensor_float_2 = make_tensor(float_data, make_shape(3, make_shape(2, 2)));
-    cpu_arrange_data(&tensor_float_2);
+    cpu_arange_data(&tensor_float_2);
     print(tensor_float_2(0, 0)); print("\n");
 
     // slice a tensor
