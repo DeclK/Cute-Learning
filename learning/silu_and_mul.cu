@@ -2,6 +2,7 @@
 #include <cutlass/util/GPU_Clock.hpp>
 #include "helper.h"
 
+#define endl print("\n")
 using namespace cute;
 
 __device__ __forceinline__ float silu(const float& val) {
@@ -48,7 +49,7 @@ __global__ void silu_and_mul(half* output,
 
       // calculate output
       for(int j = 0; j < vec_size; j++) {
-        output_thread_r(j) = __float2half(__half2float(input_a_thread_r(j)) * __half2float(input_x_thread_r(j)));
+        output_thread_r(j) = __float2half(silu(__half2float(input_a_thread_r(j))) * __half2float(input_x_thread_r(j)));
       }
 
       // copy data from r to g
@@ -98,6 +99,11 @@ int main() {
 
   // copy output back to host
   cudaMemcpy(output, d_output, b * n * c * sizeof(half), cudaMemcpyDeviceToHost);
+  Tensor output_t = make_tensor(output, make_shape(b * n, c), make_stride(c, _1{}));
+  Tensor input_t = make_tensor(input, make_shape(b * n, 2 * c), make_stride(2 * c, _1{}));
+  print((float)input_t(0, 0));endl;
+  print((float)input_t(0, c));endl;  
+  print((float)output_t(0, 0));endl;
   // free device memory
   cudaFree(d_input);
   cudaFree(d_output);
