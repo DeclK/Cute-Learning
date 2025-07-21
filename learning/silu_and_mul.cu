@@ -57,16 +57,27 @@ __global__ void silu_and_mul(half* output,
     }
 }
 
+__global__ void silu_and_mul_clean(half* output, const half *input, const int c) {
+  const int token_idx = blockIdx.x;
+  for (int i = threadIdx.x; i < c; i += blockDim.x) {
+    // calculate silu and mul
+    float a = __half2float(__ldg(&input[token_idx * 2 * c + i]));
+    float x = __half2float(__ldg(&input[token_idx * 2 * c + i + c]));
+    output[token_idx * c + i] = __float2half(silu(a) * x);
+  }
+}
 
 void run_kernel(half* output, 
                 const half *input,
                 const int b,
                 const int n,
                 const int c) {
-  dim3 block(256);
+  dim3 block(std::min(1024, c / 8));
+  // dim3 block(256);
   dim3 grid(b * n);
   silu_and_mul<8><<<grid, block>>>(output, input, b, n, c);
-  cudaDeviceSynchronize();
+  // silu_and_mul_clean<<<grid, block>>>(output, input, c);
+  // cudaDeviceSynchronize();
 }
 
 
