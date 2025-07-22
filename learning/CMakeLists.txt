@@ -23,6 +23,7 @@ set(CUTE_LEARNING_FLAGS
     "-arch=sm_80"
     "-std=c++17"
     "--expt-relaxed-constexpr"
+    "--use_fast_math"
     "-w"    # disable warning
 )
 

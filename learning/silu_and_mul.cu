@@ -1,5 +1,6 @@
 #include <cute/tensor.hpp>
 #include <cutlass/util/GPU_Clock.hpp>
+#include "vec_dtypes.cuh"
 #include "helper.h"
 
 #define endl print("\n")
@@ -57,12 +58,32 @@ __global__ void silu_and_mul(half* output,
     }
 }
 
-__global__ void silu_and_mul_clean(half* output, const half *input, const int c) {
+
+__global__ void silu_and_mul_flashinfer(half* output, const half *input, const int c) {
+  constexpr int vec_size = 8;
+  const int token_idx = blockIdx.x;
+  const int thread_idx = threadIdx.x;
+  const int stride = blockDim.x;
+  const int offset = token_idx * 2 * c;
+
+  for (int i = thread_idx; i < c / vec_size; i += stride) {
+    flashinfer::vec_t<float, vec_size> x_vec, y_vec, out_vec;
+    x_vec.cast_load(input + offset + i * vec_size);
+    y_vec.cast_load(input + offset + c + i * vec_size);
+
+    for (int j = 0; j < vec_size; j++) {
+      out_vec[j] = silu(x_vec[j]) * y_vec[j];
+    }
+    out_vec.cast_store(output + token_idx * c + i * vec_size);
+  }
+}
+
+__global__ void silu_and_mul_reference(half* output, const half *input, const int c) {
   const int token_idx = blockIdx.x;
   for (int i = threadIdx.x; i < c; i += blockDim.x) {
     // calculate silu and mul
-    float a = __half2float(__ldg(&input[token_idx * 2 * c + i]));
-    float x = __half2float(__ldg(&input[token_idx * 2 * c + i + c]));
+    float a = __half2float(input[token_idx * 2 * c + i]);
+    float x = __half2float(input[token_idx * 2 * c + i + c]);
     output[token_idx * c + i] = __float2half(silu(a) * x);
   }
 }
@@ -71,13 +92,17 @@ void run_kernel(half* output,
                 const half *input,
                 const int b,
                 const int n,
-                const int c) {
+                const int c,
+                const int check = false) {
   dim3 block(std::min(1024, c / 8));
   // dim3 block(256);
   dim3 grid(b * n);
+  
   silu_and_mul<8><<<grid, block>>>(output, input, b, n, c);
-  // silu_and_mul_clean<<<grid, block>>>(output, input, c);
-  // cudaDeviceSynchronize();
+  // silu_and_mul_reference<<<grid, block>>>(output, input, c);
+  // silu_and_mul_flashinfer<<<grid, block>>>(output, input, c);
+  
+  if (check) {CUDA_CHECK(cudaDeviceSynchronize());}
 }
 
 
@@ -93,11 +118,11 @@ int main() {
 
   // create device memory
   half *d_input, *d_output;
-  cudaMalloc(&d_input, b * n * 2 * c * sizeof(half));
-  cudaMalloc(&d_output, b * n * c * sizeof(half));
+  CUDA_CHECK(cudaMalloc(&d_input, b * n * 2 * c * sizeof(half)));
+  CUDA_CHECK(cudaMalloc(&d_output, b * n * c * sizeof(half)));
 
   // copy input to device
-  cudaMemcpy(d_input, input, b * n * 2 * c * sizeof(half), cudaMemcpyHostToDevice);
+  CUDA_CHECK(cudaMemcpy(d_input, input, b * n * 2 * c * sizeof(half), cudaMemcpyHostToDevice));
 
   run_kernel(d_output, d_input, b, n, c);
   GPU_Clock timer;
@@ -106,18 +131,20 @@ int main() {
     run_kernel(d_output, d_input, b, n, c);
   }
   auto elapsed = timer.milliseconds();
-  printf("Kernel execution time: %.2f ms\n", elapsed / 100.0f);
+  printf("Kernel execution time: %.4f ms\n", elapsed / 100.0f);
 
   // copy output back to host
-  cudaMemcpy(output, d_output, b * n * c * sizeof(half), cudaMemcpyDeviceToHost);
+  CUDA_CHECK(cudaMemcpy(output, d_output, b * n * c * sizeof(half), cudaMemcpyDeviceToHost));
   Tensor output_t = make_tensor(output, make_shape(b * n, c), make_stride(c, _1{}));
   Tensor input_t = make_tensor(input, make_shape(b * n, 2 * c), make_stride(2 * c, _1{}));
   print((float)input_t(0, 0));endl;
   print((float)input_t(0, c));endl;  
   print((float)output_t(0, 0));endl;
+  
   // free device memory
-  cudaFree(d_input);
-  cudaFree(d_output);
+  CUDA_CHECK(cudaFree(d_input));
+  CUDA_CHECK(cudaFree(d_output));
+  
   // free host memory
   free(input);
   free(output);

@@ -2,6 +2,7 @@
 1. data creation
 2. results checking
 3. print functions
+4. cuda check
 */
 
 #include <cuda.h>
@@ -9,6 +10,11 @@
 #include <stdlib.h>
 #include <cute/tensor.hpp>
 #include <stdarg.h>
+
+#define CUDA_CHECK(err) \
+  if (err != cudaSuccess) { \
+    printf("CUDA Error: %s at %s:%d\n", cudaGetErrorString(err), __FILE__, __LINE__); \
+  }
 
 void printf_fail(const char *fmt, ...) {
   int red = 31;
