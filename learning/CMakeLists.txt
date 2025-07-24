@@ -31,8 +31,10 @@ set(CUTE_LEARNING_FLAGS
 add_executable(tensor_basics tensor_basics.cu)
 add_executable(vector_add vector_add.cu)
 add_executable(silu_and_mul silu_and_mul.cu)
+add_executable(rmsnorm rmsnorm.cu)
 
 # Set CUDA compilation flags
 target_compile_options(tensor_basics PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUTE_LEARNING_FLAGS}>)
 target_compile_options(vector_add PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUTE_LEARNING_FLAGS}>)
 target_compile_options(silu_and_mul PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUTE_LEARNING_FLAGS}>)
+target_compile_options(rmsnorm PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${CUTE_LEARNING_FLAGS}>)
