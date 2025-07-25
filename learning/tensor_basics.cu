@@ -38,5 +38,23 @@ int main() {
     // print(tensor3(0,0)); // this would cause error
     print(tensor3(0,0,0));
 
-    // TODO: int8 tensor
+    Layout x = make_layout(make_shape(128, 256), LayoutRight{});
+    Layout y = make_layout(make_shape(8));
+    auto identity_layout = make_identity_layout(make_shape(2, 1, 2));
+    auto out = logical_divide(x, y);
+    print(flatten(out));endl;
+    print(group<0, 1>(out));endl;
+    print(select<0, 1>(x));endl;
+    print(take<0, 1>(x));endl;
+
+    // tiler
+    auto tiler1 = make_tile(_, make_shape(_8{}));
+    print(tiler1);endl;
+    print(logical_divide(x, tiler1));endl;
+    // print(zipped_divide(x, tiler1));endl;
+
+    auto permuted = select<1, 0>(x);
+    print(permuted);endl;
+    print(select<0>(x.shape()));endl;
+    print(get<0>(x));
 }
